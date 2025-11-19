@@ -10,8 +10,8 @@ RUN go mod download
 
 COPY . .
 
-# Generate swagger docs
-RUN /root/go/bin/swag init
+# Generate swagger docs (swag is installed in /go/bin in the golang image)
+RUN swag init
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
