@@ -1,0 +1,177 @@
+basePath: /api
+definitions:
+  main.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  main.Player:
+    properties:
+      name:
+        type: string
+      position:
+        type: integer
+    type: object
+  main.PlayerStats:
+    properties:
+      playerName:
+        type: string
+      positionBreakdown:
+        items:
+          $ref: '#/definitions/main.PositionCount'
+        type: array
+      totalSubmissions:
+        type: integer
+    type: object
+  main.PositionCount:
+    properties:
+      count:
+        type: integer
+      position:
+        type: integer
+    type: object
+  main.Submission:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      ipAddress:
+        type: string
+      players:
+        items:
+          $ref: '#/definitions/main.Player'
+        type: array
+      submittedBy:
+        type: string
+    type: object
+  main.SubmissionRequest:
+    properties:
+      players:
+        items:
+          $ref: '#/definitions/main.Player'
+        type: array
+      submittedBy:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact:
+    email: support@top20.com
+    name: API Support
+  description: API para gerenciar submissões de top 20 jogadores
+  title: Top20 API
+  version: "1.0"
+paths:
+  /api/health:
+    get:
+      description: Verifica o status da API e conexão com banco de dados
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /api/players/stats:
+    get:
+      description: Retorna estatísticas de quantas vezes um jogador apareceu em cada
+        posição
+      parameters:
+      - description: Nome do jogador
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.PlayerStats'
+        "400":
+          description: Nome do jogador não fornecido
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Jogador não encontrado em nenhuma submissão
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Erro interno do servidor
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Estatísticas de um jogador
+      tags:
+      - players
+  /api/submissions:
+    get:
+      description: Retorna todas as submissões ou filtra por submittedBy
+      parameters:
+      - description: Filtrar por quem submeteu
+        in: query
+        name: submittedBy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Submission'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Listar submissões
+      tags:
+      - submissions
+    post:
+      consumes:
+      - application/json
+      description: Submete uma lista com exatamente 20 jogadores. Apenas uma submissão
+        por IP é permitida.
+      parameters:
+      - description: Lista de 20 jogadores
+        in: body
+        name: submission
+        required: true
+        schema:
+          $ref: '#/definitions/main.SubmissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Submissão criada com sucesso
+        "400":
+          description: Número incorreto de jogadores ou campos faltando
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "409":
+          description: IP já submeteu anteriormente
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Erro interno do servidor
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Submeter top 20 jogadores
+      tags:
+      - submissions
+swagger: "2.0"
