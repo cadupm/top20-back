@@ -22,6 +22,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /app/main .
+COPY --from=builder /app/docs ./docs
 
 EXPOSE ${API_PORT:-3000}
 

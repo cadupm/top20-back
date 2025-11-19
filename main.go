@@ -23,7 +23,7 @@ import (
 // @description API para gerenciar submissões de top 20 jogadores
 // @contact.name API Support
 // @contact.email support@top20.com
-// @host localhost:3000
+// @host top20-api.fly.dev
 // @BasePath /api
 
 type Player struct {
