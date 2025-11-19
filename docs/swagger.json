@@ -46,34 +46,30 @@
         },
         "/api/players/stats": {
             "get": {
-                "description": "Retorna estatísticas de quantas vezes um jogador apareceu em cada posição",
+                "description": "Retorna estatísticas de jogadores. Se 'name' for fornecido, retorna array com um jogador. Caso contrário, retorna estatísticas de todos os jogadores.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "players"
                 ],
-                "summary": "Estatísticas de um jogador",
+                "summary": "Estatísticas de jogadores",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Nome do jogador",
+                        "description": "Nome do jogador (opcional)",
                         "name": "name",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.PlayerStats"
-                        }
-                    },
-                    "400": {
-                        "description": "Nome do jogador não fornecido",
-                        "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.PlayerStats"
+                            }
                         }
                     },
                     "404": {

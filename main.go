@@ -382,13 +382,12 @@ func handleGetSubmissions(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(result)
 }
 
-// @Summary Estatísticas de um jogador
-// @Description Retorna estatísticas de quantas vezes um jogador apareceu em cada posição
+// @Summary Estatísticas de jogadores
+// @Description Retorna estatísticas de jogadores. Se 'name' for fornecido, retorna array com um jogador. Caso contrário, retorna estatísticas de todos os jogadores.
 // @Tags players
 // @Produce json
-// @Param name query string true "Nome do jogador"
-// @Success 200 {object} PlayerStats
-// @Failure 400 {object} ErrorResponse "Nome do jogador não fornecido"
+// @Param name query string false "Nome do jogador (opcional)"
+// @Success 200 {array} PlayerStats
 // @Failure 404 {object} ErrorResponse "Jogador não encontrado em nenhuma submissão"
 // @Failure 500 {object} ErrorResponse "Erro interno do servidor"
 // @Router /api/players/stats [get]
@@ -399,15 +398,6 @@ func handlePlayerStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	playerName := r.URL.Query().Get("name")
-	if playerName == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Error:   "Missing required parameter",
-			Message: "Player name is required",
-		})
-		return
-	}
 
 	// Query all submissions
 	rows, err := db.Query("SELECT id, players FROM submissions ORDER BY created_at DESC")
@@ -418,9 +408,8 @@ func handlePlayerStats(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	// Map to count positions
-	positionCounts := make(map[int]int)
-	totalSubmissions := 0
+	// Map: playerName -> map[position]count
+	allPlayersStats := make(map[string]map[int]int)
 
 	for rows.Next() {
 		var id int
@@ -439,19 +428,25 @@ func handlePlayerStats(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// Search for the player in this submission
+		// Count positions for each player
 		for _, player := range players {
-			// Case-insensitive comparison
-			if equalsCaseInsensitive(player.Name, playerName) {
-				positionCounts[player.Position]++
-				totalSubmissions++
-				break // Found in this submission, move to next
+			// Normalize player name (case-insensitive)
+			normalizedName := player.Name
+			
+			// If filtering by specific player, check if matches
+			if playerName != "" && !equalsCaseInsensitive(player.Name, playerName) {
+				continue
 			}
+
+			if allPlayersStats[normalizedName] == nil {
+				allPlayersStats[normalizedName] = make(map[int]int)
+			}
+			allPlayersStats[normalizedName][player.Position]++
 		}
 	}
 
-	// If player not found in any submission
-	if totalSubmissions == 0 {
+	// If filtering by specific player and not found
+	if playerName != "" && len(allPlayersStats) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(ErrorResponse{
@@ -461,28 +456,43 @@ func handlePlayerStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build response
-	positionBreakdown := make([]PositionCount, 0, len(positionCounts))
-	for position, count := range positionCounts {
-		positionBreakdown = append(positionBreakdown, PositionCount{
-			Position: position,
-			Count:    count,
+	// Build response array
+	result := make([]PlayerStats, 0, len(allPlayersStats))
+	
+	for name, positionCounts := range allPlayersStats {
+		positionBreakdown := make([]PositionCount, 0, len(positionCounts))
+		totalSubmissions := 0
+		
+		for position, count := range positionCounts {
+			positionBreakdown = append(positionBreakdown, PositionCount{
+				Position: position,
+				Count:    count,
+			})
+			totalSubmissions += count
+		}
+
+		// Sort by position
+		sort.Slice(positionBreakdown, func(i, j int) bool {
+			return positionBreakdown[i].Position < positionBreakdown[j].Position
+		})
+
+		result = append(result, PlayerStats{
+			PlayerName:        name,
+			TotalSubmissions:  totalSubmissions,
+			PositionBreakdown: positionBreakdown,
 		})
 	}
 
-	// Sort by position
-	sort.Slice(positionBreakdown, func(i, j int) bool {
-		return positionBreakdown[i].Position < positionBreakdown[j].Position
+	// Sort by total submissions (descending) and then by name
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].TotalSubmissions == result[j].TotalSubmissions {
+			return result[i].PlayerName < result[j].PlayerName
+		}
+		return result[i].TotalSubmissions > result[j].TotalSubmissions
 	})
 
-	stats := PlayerStats{
-		PlayerName:        playerName,
-		TotalSubmissions:  totalSubmissions,
-		PositionBreakdown: positionBreakdown,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	json.NewEncoder(w).Encode(result)
 }
 
 // equalsCaseInsensitive compares two strings case-insensitively

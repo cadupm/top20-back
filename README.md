@@ -88,28 +88,52 @@ curl "http://localhost:3000/api/submissions?submittedBy=João"
 ```
 
 ### GET /api/players/stats
-Retorna estatísticas de um jogador específico: em quantas submissões ele aparece e em quais posições.
+Retorna estatísticas de jogadores. Se passar `name`, retorna array com um jogador específico. Sem `name`, retorna array com todos os jogadores.
 
 **Query Params:**
-- `name` (obrigatório): Nome do jogador
+- `name` (opcional): Nome do jogador
 
-**Exemplo:**
+**Exemplos:**
 ```bash
+# Jogador específico (array com 1 item)
 curl "http://localhost:3000/api/players/stats?name=Cristiano%20Ronaldo"
+
+# Todos os jogadores (array com todos)
+curl "http://localhost:3000/api/players/stats"
 ```
 
-**Resposta 200:**
+**Resposta 200 (um jogador):**
 ```json
-{
-  "playerName": "Cristiano Ronaldo",
-  "totalSubmissions": 10,
-  "positionBreakdown": [
-    { "position": 1, "count": 5 },
-    { "position": 2, "count": 3 },
-    { "position": 5, "count": 2 }
-  ]
-}
+[
+  {
+    "playerName": "Cristiano Ronaldo",
+    "totalSubmissions": 10,
+    "positionBreakdown": [
+      { "position": 1, "count": 5 },
+      { "position": 2, "count": 3 },
+      { "position": 5, "count": 2 }
+    ]
+  }
+]
 ```
+
+**Resposta 200 (todos):**
+```json
+[
+  {
+    "playerName": "Cristiano Ronaldo",
+    "totalSubmissions": 15,
+    "positionBreakdown": [...]
+  },
+  {
+    "playerName": "Lionel Messi",
+    "totalSubmissions": 12,
+    "positionBreakdown": [...]
+  }
+]
+```
+
+**Nota:** Os jogadores são ordenados por `totalSubmissions` (decrescente) e depois por nome.
 
 **Resposta 404:**
 ```json
